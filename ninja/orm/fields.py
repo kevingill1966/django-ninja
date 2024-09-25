@@ -110,7 +110,7 @@ def create_m2m_link_type(type_: Type[TModel]) -> Type[TModel]:
 
 @no_type_check
 def get_schema_field(
-    field: DjangoField, *, depth: int = 0, optional: bool = False
+     field: DjangoField, *, depth: int = 0, optional: bool = False, use_attname: bool = False
 ) -> Tuple:
     "Returns pydantic field from django's model field"
     alias = None
@@ -132,7 +132,9 @@ def get_schema_field(
             default = None
             nullable = True
 
-        alias = getattr(field, "get_attname", None) and field.get_attname()
+        # If we are using the attname for the field, we don't use an alias
+        if not use_attname:
+            alias = getattr(field, "get_attname", None) and field.get_attname()
 
         pk_type = TYPES.get(internal_type, int)
         if field.one_to_many or field.many_to_many:

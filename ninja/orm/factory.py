@@ -43,6 +43,7 @@ class SchemaFactory:
         optional_fields: Optional[List[str]] = None,
         custom_fields: Optional[List[Tuple[str, Any, Any]]] = None,
         base_class: Type[Schema] = Schema,
+        use_attname: bool = False
     ) -> Type[Schema]:
         name = name or model.__name__
 
@@ -67,7 +68,11 @@ class SchemaFactory:
                 depth=depth,
                 optional=optional_fields and (fld.name in optional_fields),
             )
-            definitions[fld.name] = (python_type, field_info)
+            if use_attname:
+                fld_name = fld.get_attname() if hasattr(fld, 'get_attname') else fld.name
+            else:
+                fld_name = fld.name
+            definitions[fld_name] = (python_type, field_info)
 
         if custom_fields:
             for fld_name, python_type, field_info in custom_fields:
