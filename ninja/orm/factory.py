@@ -68,7 +68,7 @@ class SchemaFactory:
                 depth=depth,
                 optional=optional_fields and (fld.name in optional_fields),
             )
-            if use_attname:
+            if use_attname and depth == 0:
                 fld_name = fld.get_attname() if hasattr(fld, 'get_attname') else fld.name
             else:
                 fld_name = fld.name

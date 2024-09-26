@@ -581,3 +581,83 @@ def test_optional_fields():
         SomeReqFieldModel, optional_fields=["some_field", "other_field", "optional"]
     )
     assert Schema.json_schema().get("required") is None
+
+def test_relational_attname():
+    class Related2(models.Model):
+        charfield = models.CharField()
+
+        class Meta:
+            app_label = "tests"
+
+    class TestModel2(models.Model):
+        manytomanyfield = models.ManyToManyField(Related2)
+        onetoonefield = models.OneToOneField(Related2, on_delete=models.CASCADE)
+        foreignkey = models.ForeignKey(Related2, on_delete=models.SET_NULL, null=True)
+
+        class Meta:
+            app_label = "tests"
+
+    SchemaCls = create_schema(TestModel2, name="TestSchema2", use_attname=True)
+    # print(SchemaCls.json_schema())
+    assert SchemaCls.json_schema() == {
+        "title": "TestSchema2",
+        "type": "object",
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "onetoonefield_id": {"title": "Onetoonefield", "type": "integer"},
+            "foreignkey_id": {
+                "anyOf": [{"type": "integer"}, {"type": "null"}],
+                "title": "Foreignkey",
+            },
+            "manytomanyfield": {
+                "title": "Manytomanyfield",
+                "type": "array",
+                "items": {"type": "integer"},
+            },
+        },
+        "required": ["onetoonefield_id", "manytomanyfield"],
+    }
+
+    SchemaClsDeep = create_schema(TestModel2, name="TestSchemaDeep2", depth=1, use_attname=True)
+    # print(SchemaClsDeep.json_schema())
+    assert SchemaClsDeep.json_schema() == {
+        "type": "object",
+        "properties": {
+            "id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "ID"},
+            "onetoonefield": pydantic_ref_fix(
+                {
+                    "title": "Onetoonefield",
+                    "description": "",
+                    "$ref": "#/$defs/Related2",
+                }
+            ),
+            "foreignkey": {
+                "title": "Foreignkey",
+                "allOf": [{"$ref": "#/$defs/Related2"}],
+                "description": "",
+            },
+            "manytomanyfield": {
+                "title": "Manytomanyfield",
+                "type": "array",
+                "items": {"$ref": "#/$defs/Related2"},
+                "description": "",
+            },
+        },
+        "required": ["onetoonefield", "manytomanyfield"],
+        "title": "TestSchemaDeep2",
+        "$defs": {
+            "Related2": {
+                "title": "Related2",
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "anyOf": [{"type": "integer"}, {"type": "null"}],
+                        "title": "ID",
+                    },
+                    "charfield": {"type": "string", "title": "Charfield"},
+                },
+                "required": ["charfield"],
+            }
+        },
+    }
+
